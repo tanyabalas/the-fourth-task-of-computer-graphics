@@ -1,0 +1,107 @@
+#include <vector>
+#include <cmath>
+#include "tgaimage.h"
+#include <algorithm>
+#include "tgaimage.cpp"
+#include <fstream>
+#include <string>
+
+using namespace std;
+
+const TGAColor white = TGAColor(255, 255, 255, 255);
+
+const int width = 800;
+const int height = 800;
+
+void line(int x0, int y0, int x1, int y1, TGAImage& image, TGAColor color) {
+    bool steep = 0;
+    float t;
+    int y;
+    if (abs(x0 - x1) < abs(y0 - y1)) {
+
+        swap(x0, y0);
+        swap(x1, y1);
+        steep = 1;
+    }
+    if (x0 > x1)
+    {
+        swap(x0, x1);
+        swap(y0, y1);
+    }
+
+    for (int x = x0; x <= x1; x++)
+    {
+        t = (x - x0) / (float)(x1 - x0);
+        y = y0 * (1. - t) + y1 * t;
+        if (steep)
+        {
+            image.set(y, x, color);
+        }
+        else
+        {
+            image.set(x, y, color);
+        }
+    }
+}
+
+int main() {
+    ifstream inputfile;
+    inputfile.open("obj/african_head.obj", ios_base::binary);
+    if (inputfile.fail()) return 1;
+
+    string l, l1;
+    float v;
+    int number_of_vertex;
+
+    vector <vector <int> > faces;
+    vector <vector <double> > vertexes;
+
+    vector <int> fa(3);
+    vector <double> ve(3);
+
+    int i, j, x0, y0, x1, y1;
+    setlocale(LC_ALL, "rus");
+    while (!inputfile.eof())
+    {
+        inputfile >> l;
+        if (l == "v")
+        {
+            ve.clear();
+            for (i = 0; i < 3; i++)
+            {
+                inputfile >> v;
+                ve.push_back(v);
+            }
+            vertexes.push_back(ve);
+        }
+        if (l == "f")
+        {
+            fa.clear();
+            for (j = 0; j < 3; j++)
+            {
+                inputfile >> l;
+                number_of_vertex = stoi(l);
+
+                fa.push_back(number_of_vertex);
+            }
+            faces.push_back(fa);
+        }
+    }
+
+    if (faces.empty() || vertexes.empty()) cout << "Один из векторов пуст";
+
+    TGAImage image(width, height, TGAImage::RGB);
+    for (i = 0; i < faces.size(); ++i)
+    {
+        for (j = 0; j < 3; j++) {
+            x0 = (vertexes[faces[i][j] - 1][0] + 1.) * width / 2.;
+            y0 = (vertexes[faces[i][j] - 1][1] + 1.) * height / 2.;
+            x1 = (vertexes[faces[i][(j + 1) % 3] - 1][0] + 1.) * width / 2.;
+            y1 = (vertexes[faces[i][(j + 1) % 3] - 1][1] + 1.) * height / 2.;
+            line(x0, y0, x1, y1, image, white);
+        }
+    }
+    image.flip_vertically();
+    image.write_tga_file("output.tga");
+    return 0;
+}
